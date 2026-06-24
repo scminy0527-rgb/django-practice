@@ -2,7 +2,7 @@
 
 # conda activate django_study
 # python manage.py runserver
-# http://localhost:8000
+# http://localhost:8000/api/items/
 
 """Django's command-line utility for administrative tasks."""
 import os
