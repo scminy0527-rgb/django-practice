@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detection Result</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .back-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .back-link:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-processing {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-done {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .video-section {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .video-container {
+            background: #000;
+            padding: 20px;
+            text-align: center;
+        }
+
+        video {
+            max-width: 100%;
+            max-height: 600px;
+            border-radius: 8px;
+        }
+
+        .video-placeholder {
+            color: #999;
+            padding: 60px 20px;
+        }
+
+        .stats-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .stats-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .detection-list {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .detection-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9ff;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .detection-class {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .detection-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .message-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-section {
+                height: auto;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Detection Result</h1>
+                <p style="color: #666; margin-top: 5px;">Job #{{ job.id }}</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span class="status-badge status-{{ job.status }}">{{ job.get_status_display }}</span>
+                <a href="{% url 'upload_view' %}" class="back-link">← Back</a>
+            </div>
+        </div>
+
+        {% if job.status == "processing" %}
+        <div class="message message-info">
+            ⏳ Processing video... This may take a few minutes. Please refresh the page.
+        </div>
+        {% elif job.status == "failed" %}
+        <div class="message message-error">
+            ❌ Video processing failed. Please try again.
+        </div>
+        {% endif %}
+
+        <div class="content">
+            <div class="video-section">
+                <div class="video-container">
+                    {% if job.result_video %}
+                        <video controls>
+                            <source src="{{ job.result_video.url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    {% else %}
+                        <div class="video-placeholder">
+                            {% if job.status == "done" %}
+                                No result video available
+                            {% else %}
+                                Video not yet available
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-title">📊 Detection Statistics</div>
+
+                <div class="stat-item">
+                    <span class="stat-label">Total Detections</span>
+                    <span class="stat-value">{{ job.detected_count }}</span>
+                </div>
+
+                <div class="stat-item">
+                    <span class="stat-label">Processed At</span>
+                    <span class="stat-value" style="font-size: 14px; color: #666;">
+                        {{ job.updated_at|date:"M d, Y H:i" }}
+                    </span>
+                </div>
+
+                {% if job.detection_summary %}
+                <div class="detection-list">
+                    <div class="stats-title" style="font-size: 14px; margin-bottom: 10px;">Detected Classes</div>
+                    {% for class_name, count in job.detection_summary.items %}
+                    <div class="detection-item">
+                        <span class="detection-class">{{ class_name }}</span>
+                        <span class="detection-count">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if job.status == "processing" %}
+    <script>
+        setTimeout(() => {
+            location.reload();
+        }, 3000);
+    </script>
+    {% endif %}
+</body>
+</html>

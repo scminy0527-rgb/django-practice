@@ -32,3 +32,7 @@ models/ models.py
 services/ 직접 구현
 .env settings.py
 나중에 새 프로젝트 팔 때 이 순서대로 따라하면 돼요.
+
+# YOLO 관련 지침
+
+객체탐지 ai 모델 yolo 를 사용하려고 함. 해당 관련 지침은 동일 디렉토리에 있는 D:\dev\workspace\python\django_practice\YOLO.md 를 참고하면 됨

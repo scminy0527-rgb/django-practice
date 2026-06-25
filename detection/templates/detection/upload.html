@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Video Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 13px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: none;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .submit-btn.active {
+            display: block;
+        }
+
+        .file-name {
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .file-name.active {
+            display: block;
+        }
+
+        .recent-jobs {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
+        }
+
+        .recent-jobs h2 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .job-list {
+            list-style: none;
+        }
+
+        .job-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f8f9ff;
+            margin-bottom: 8px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .job-item:hover {
+            background: #f0f2ff;
+            transform: translateX(5px);
+        }
+
+        .job-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .job-id {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .job-date {
+            color: #999;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .job-status {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-processing {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-done {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 YOLO Video Detection</h1>
+        <p class="subtitle">Upload a video to detect objects (person, car, truck, bus, bicycle)</p>
+
+        <form id="uploadForm" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📹</div>
+                <div class="upload-text">Click to upload or drag & drop</div>
+                <div class="upload-hint">MP4, MOV, AVI up to 500MB</div>
+                <input type="file" id="videoFile" name="video_file" accept="video/*">
+            </div>
+            <div class="file-name" id="fileName"></div>
+            <button type="submit" class="submit-btn" id="submitBtn" disabled>Process Video</button>
+        </form>
+
+        {% if jobs %}
+        <div class="recent-jobs">
+            <h2>📋 Recent Jobs</h2>
+            <ul class="job-list">
+                {% for job in jobs %}
+                <a href="{% url 'result_view' job.id %}" class="job-item">
+                    <div class="job-info">
+                        <span class="job-id">Job #{{ job.id }}</span>
+                        <span class="job-date">{{ job.created_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                    <span class="job-status status-{{ job.status }}">{{ job.get_status_display }}</span>
+                </a>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const videoFile = document.getElementById('videoFile');
+        const fileName = document.getElementById('fileName');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('uploadForm');
+
+        uploadArea.addEventListener('click', () => videoFile.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            videoFile.files = e.dataTransfer.files;
+            updateFileName();
+        });
+
+        videoFile.addEventListener('change', updateFileName);
+
+        function updateFileName() {
+            if (videoFile.files.length > 0) {
+                const file = videoFile.files[0];
+                fileName.textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                fileName.classList.add('active');
+                submitBtn.classList.add('active');
+                submitBtn.disabled = false;
+            } else {
+                fileName.classList.remove('active');
+                submitBtn.classList.remove('active');
+                submitBtn.disabled = true;
+            }
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+            form.submit();
+        });
+    </script>
+</body>
+</html>
