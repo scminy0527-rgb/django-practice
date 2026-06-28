@@ -1,27 +1,19 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.parsers import MultiPartParser, FormParser
-from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
+from django.http import FileResponse
 from .models import VideoJob
-from .serializers import VideoJobSerializer
 from .services import process_video
+from .serializers import VideoJobSerializer, VideoUploadSerializer
 
 
-class VideoUploadAPIView(APIView):
-    parser_classes = (MultiPartParser, FormParser)
-
-    def post(self, request):
-        """동영상 파일을 업로드하고 객체탐지 작업을 시작합니다."""
-        video_file = request.FILES.get("video_file")
-        if not video_file:
-            return Response(
-                {"error": "No file provided"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        job = VideoJob.objects.create(original_video=video_file)
-
+@api_view(['POST'])
+def upload_video(request):
+    """비디오 파일 업로드 및 처리 시작"""
+    serializer = VideoUploadSerializer(data=request.data)
+    if serializer.is_valid():
+        job = serializer.save()
         try:
             process_video(job.id)
         except Exception as e:
@@ -32,19 +24,92 @@ class VideoUploadAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        serializer = VideoJobSerializer(job)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def get(self, request):
-        """최근 동영상 작업 목록을 조회합니다."""
-        jobs = VideoJob.objects.all()[:5]
-        serializer = VideoJobSerializer(jobs, many=True)
-        return Response(serializer.data)
+        response_serializer = VideoJobSerializer(job, context={'request': request})
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class VideoJobDetailAPIView(APIView):
-    def get(self, request, job_id):
-        """특정 동영상 작업의 상세 정보를 조회합니다."""
-        job = get_object_or_404(VideoJob, id=job_id)
-        serializer = VideoJobSerializer(job)
-        return Response(serializer.data)
+@api_view(['GET'])
+def get_job_status(request, job_id):
+    """특정 job의 상태 및 결과 조회"""
+    try:
+        job = VideoJob.objects.get(id=job_id)
+    except VideoJob.DoesNotExist:
+        raise NotFound({"error": f"Job {job_id} not found"})
+
+    serializer = VideoJobSerializer(job, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def list_jobs(request):
+    """최근 job 목록 조회"""
+    jobs = VideoJob.objects.all()[:20]
+    serializer = VideoJobSerializer(jobs, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def serve_original_video(request, job_id):
+    """원본 비디오 스트리밍"""
+    try:
+        job = VideoJob.objects.get(id=job_id)
+    except VideoJob.DoesNotExist:
+        raise NotFound({"error": f"Job {job_id} not found"})
+
+    if not job.original_video:
+        return Response(
+            {"error": "Original video not available"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    file_response = FileResponse(
+        open(job.original_video.path, 'rb'),
+        content_type='video/mp4'
+    )
+    file_response['Content-Disposition'] = 'inline'
+    return file_response
+
+
+@api_view(['GET'])
+def serve_result_video(request, job_id):
+    """처리된 비디오 스트리밍"""
+    try:
+        job = VideoJob.objects.get(id=job_id)
+    except VideoJob.DoesNotExist:
+        raise NotFound({"error": f"Job {job_id} not found"})
+
+    if not job.result_video:
+        return Response(
+            {"error": "Result video not available"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    file_response = FileResponse(
+        open(job.result_video.path, 'rb'),
+        content_type='video/mp4'
+    )
+    file_response['Content-Disposition'] = 'inline'
+    return file_response
+
+
+@api_view(['GET'])
+def download_result_video(request, job_id):
+    """처리된 비디오 다운로드"""
+    try:
+        job = VideoJob.objects.get(id=job_id)
+    except VideoJob.DoesNotExist:
+        raise NotFound({"error": f"Job {job_id} not found"})
+
+    if not job.result_video:
+        return Response(
+            {"error": "Result video not available"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    file_response = FileResponse(
+        open(job.result_video.path, 'rb'),
+        content_type='video/mp4'
+    )
+    file_response['Content-Disposition'] = f'attachment; filename="result_{job_id}.mp4"'
+    return file_response
