@@ -9,6 +9,9 @@ __pycache__/
 # SQLite 로컬 DB
 db.sqlite3
 
+# 미디어 파일 (업로드된 사용자 파일)
+media/
+
 # IDE 설정
 .vscode/
 
@@ -16,6 +19,8 @@ db.sqlite3
 venv/
 .venv/
 env/
+
+
 
 # OS 파일
 .DS_Store

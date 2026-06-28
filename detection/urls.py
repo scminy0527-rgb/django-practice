@@ -1,7 +1,7 @@
 from django.urls import path
-from . import views
+from .views import VideoUploadAPIView, VideoJobDetailAPIView
 
 urlpatterns = [
-    path("", views.upload_view, name="upload_view"),
-    path("result/<int:job_id>/", views.result_view, name="result_view"),
+    path("videos/", VideoUploadAPIView.as_view(), name="video_upload"),
+    path("videos/<int:job_id>/", VideoJobDetailAPIView.as_view(), name="video_detail"),
 ]
